@@ -17,6 +17,8 @@ export interface ProductSummary {
 
 export interface Metrics {
   totalRevenue: number;
+  monthlyRevenue: number; // Novo: Faturamento do mês atual
+  annualRevenue: number;  // Novo: Faturamento do ano atual
   totalSalesCount: number;
   averageTicket: number;
   products: ProductSummary[];

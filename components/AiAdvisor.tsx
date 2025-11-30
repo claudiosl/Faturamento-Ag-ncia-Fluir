@@ -6,10 +6,11 @@ import ReactMarkdown from 'react-markdown';
 
 interface AiAdvisorProps {
   metrics: Metrics;
-  targetRevenue: number;
+  targetMonthly: number;
+  targetAnnual: number;
 }
 
-export const AiAdvisor: React.FC<AiAdvisorProps> = ({ metrics, targetRevenue }) => {
+export const AiAdvisor: React.FC<AiAdvisorProps> = ({ metrics, targetMonthly, targetAnnual }) => {
   const [advice, setAdvice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +18,7 @@ export const AiAdvisor: React.FC<AiAdvisorProps> = ({ metrics, targetRevenue }) 
     if (metrics.totalRevenue === 0) return;
     
     setLoading(true);
-    const result = await getBusinessInsights(metrics, targetRevenue);
+    const result = await getBusinessInsights(metrics, targetMonthly, targetAnnual);
     setAdvice(result);
     setLoading(false);
   };
@@ -32,7 +33,7 @@ export const AiAdvisor: React.FC<AiAdvisorProps> = ({ metrics, targetRevenue }) 
           Consultor Inteligente
         </h3>
         <p className="text-indigo-100 text-sm mb-6 max-w-lg">
-          Use nossa IA para analisar seus números e descobrir estratégias personalizadas para bater sua meta de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(targetRevenue)}.
+          Use nossa IA para analisar se você está no caminho certo para bater suas metas de curto (Mês) e longo prazo (Ano).
         </p>
 
         {!advice && !loading && (
@@ -52,7 +53,7 @@ export const AiAdvisor: React.FC<AiAdvisorProps> = ({ metrics, targetRevenue }) 
         {loading && (
           <div className="flex items-center space-x-3 text-indigo-100 animate-pulse">
             <Loader2 className="animate-spin" />
-            <span>Analisando seus dados de vendas...</span>
+            <span>Analisando performance Mensal vs Anual...</span>
           </div>
         )}
 

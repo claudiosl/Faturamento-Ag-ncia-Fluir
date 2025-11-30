@@ -10,7 +10,11 @@ import { Trash2, AlertTriangle, X } from 'lucide-react';
 
 export default function App() {
   const [sales, setSales] = useState<Sale[]>([]);
-  const [targetRevenue, setTargetRevenue] = useState<number>(10000);
+  
+  // Metas separadas
+  const [targetMonthly, setTargetMonthly] = useState<number>(10000);
+  const [targetAnnual, setTargetAnnual] = useState<number>(120000);
+  
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleAddSale = (productName: string, price: number, quantity: number) => {
@@ -27,26 +31,47 @@ export default function App() {
 
   const confirmResetData = () => {
     setSales([]);
-    setTargetRevenue(10000); // Reseta a meta para o padrão
+    setTargetMonthly(10000);
+    setTargetAnnual(120000);
     setShowResetConfirm(false);
   };
 
   // Derive Metrics from Sales
   const metrics: Metrics = useMemo(() => {
-    const totalRevenue = sales.reduce((acc, curr) => acc + curr.total, 0);
-    const totalSalesCount = sales.length; // Transações
-    // const totalQuantitySold = sales.reduce((acc, curr) => acc + curr.quantity, 0);
-    const averageTicket = totalSalesCount > 0 ? totalRevenue / totalSalesCount : 0;
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
+    let totalRevenue = 0;
+    let monthlyRevenue = 0;
+    let annualRevenue = 0;
+    
     // Group by product
     const productMap = new Map<string, { revenue: number; quantity: number }>();
+
     sales.forEach(sale => {
+      // Totals
+      totalRevenue += sale.total;
+
+      // Date logic
+      const saleDate = new Date(sale.date);
+      if (saleDate.getFullYear() === currentYear) {
+        annualRevenue += sale.total;
+        if (saleDate.getMonth() === currentMonth) {
+          monthlyRevenue += sale.total;
+        }
+      }
+
+      // Product logic
       const current = productMap.get(sale.productName) || { revenue: 0, quantity: 0 };
       productMap.set(sale.productName, {
         revenue: current.revenue + sale.total,
         quantity: current.quantity + sale.quantity
       });
     });
+
+    const totalSalesCount = sales.length;
+    const averageTicket = totalSalesCount > 0 ? totalRevenue / totalSalesCount : 0;
 
     // Convert map to array
     let productsArray: ProductSummary[] = Array.from(productMap.entries()).map(([name, data]) => ({
@@ -60,9 +85,8 @@ export default function App() {
     // Sort by revenue desc
     productsArray.sort((a, b) => b.totalRevenue - a.totalRevenue);
 
-    // Apply logic: Top 3 products are "Principal" (Curva A aprox)
-    // Se tiver poucos produtos, ajusta logica dinamicamente
-    const cutoffIndex = Math.max(1, Math.floor(productsArray.length * 0.2)); // Top 20%
+    // Apply logic: Top 20% products are "Principal"
+    const cutoffIndex = Math.max(1, Math.floor(productsArray.length * 0.2)); 
     
     productsArray = productsArray.map((p, index) => ({
       ...p,
@@ -71,13 +95,15 @@ export default function App() {
 
     return {
       totalRevenue,
+      monthlyRevenue,
+      annualRevenue,
       totalSalesCount,
       averageTicket,
       products: productsArray
     };
   }, [sales]);
 
-  const hasDataToReset = sales.length > 0 || targetRevenue !== 10000;
+  const hasDataToReset = sales.length > 0 || targetMonthly !== 10000 || targetAnnual !== 120000;
 
   return (
     <div className="min-h-screen pb-12 bg-slate-50 relative">
@@ -100,7 +126,7 @@ export default function App() {
               </div>
               <h3 className="text-xl font-bold text-slate-800 mb-2">Resetar Painel?</h3>
               <p className="text-slate-600 text-sm mb-6 px-4">
-                Isso apagará permanentemente todas as vendas registradas e restaurará a meta inicial. Essa ação não pode ser desfeita.
+                Isso apagará permanentemente todas as vendas registradas e restaurará as metas iniciais. Essa ação não pode ser desfeita.
               </p>
               
               <div className="flex w-full space-x-3">
@@ -182,19 +208,21 @@ export default function App() {
             <div className="lg:col-span-1 space-y-8">
                 <GoalSimulator 
                     metrics={metrics} 
-                    targetRevenue={targetRevenue} 
-                    setTargetRevenue={setTargetRevenue} 
+                    targetMonthly={targetMonthly}
+                    setTargetMonthly={setTargetMonthly}
+                    targetAnnual={targetAnnual}
+                    setTargetAnnual={setTargetAnnual}
                 />
                 
-                <AiAdvisor metrics={metrics} targetRevenue={targetRevenue} />
+                <AiAdvisor metrics={metrics} targetMonthly={targetMonthly} targetAnnual={targetAnnual} />
 
                 {/* Info Box */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 text-sm text-slate-600 shadow-sm">
-                    <h4 className="font-semibold text-slate-800 mb-3 border-b pb-2">Como aumentar o faturamento?</h4>
+                    <h4 className="font-semibold text-slate-800 mb-3 border-b pb-2">Dicas de Faturamento</h4>
                     <ul className="space-y-3 list-disc list-inside">
-                        <li><strong className="text-indigo-600">Ticket Médio:</strong> Tente vender mais produtos para o mesmo cliente (upsell/cross-sell).</li>
-                        <li><strong className="text-indigo-600">Produtos Principais:</strong> Foque marketing nos itens com etiqueta "Principal".</li>
-                        <li><strong className="text-indigo-600">Meta:</strong> Use o simulador acima para saber exatamente quanto falta.</li>
+                        <li><strong className="text-indigo-600">Ticket Médio:</strong> Tente vender mais produtos para o mesmo cliente.</li>
+                        <li><strong className="text-indigo-600">Curva A:</strong> Foque nos produtos "Principais" que geram mais receita.</li>
+                        <li><strong className="text-indigo-600">Metas:</strong> Use as abas Mensal/Anual acima para ver seu progresso real.</li>
                     </ul>
                 </div>
             </div>

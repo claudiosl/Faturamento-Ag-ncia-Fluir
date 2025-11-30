@@ -1,16 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Metrics } from '../types';
-import { Target, TrendingUp, AlertCircle, ArrowRight } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Calendar, CalendarDays } from 'lucide-react';
 
 interface GoalSimulatorProps {
   metrics: Metrics;
-  targetRevenue: number;
-  setTargetRevenue: (val: number) => void;
+  targetMonthly: number;
+  setTargetMonthly: (val: number) => void;
+  targetAnnual: number;
+  setTargetAnnual: (val: number) => void;
 }
 
-export const GoalSimulator: React.FC<GoalSimulatorProps> = ({ metrics, targetRevenue, setTargetRevenue }) => {
-  const revenueGap = Math.max(0, targetRevenue - metrics.totalRevenue);
-  const progress = Math.min(100, (metrics.totalRevenue / (targetRevenue || 1)) * 100);
+export const GoalSimulator: React.FC<GoalSimulatorProps> = ({ 
+    metrics, 
+    targetMonthly, 
+    setTargetMonthly, 
+    targetAnnual, 
+    setTargetAnnual 
+}) => {
+  const [activeTab, setActiveTab] = useState<'monthly' | 'annual'>('monthly');
+
+  const currentTarget = activeTab === 'monthly' ? targetMonthly : targetAnnual;
+  const currentRevenue = activeTab === 'monthly' ? metrics.monthlyRevenue : metrics.annualRevenue;
+  const setTarget = activeTab === 'monthly' ? setTargetMonthly : setTargetAnnual;
+  const label = activeTab === 'monthly' ? 'Mês Atual' : 'Ano Atual';
+
+  const revenueGap = Math.max(0, currentTarget - currentRevenue);
+  const progress = Math.min(100, (currentRevenue / (currentTarget || 1)) * 100);
   
   // Calculate how many tickets needed
   const salesNeeded = metrics.averageTicket > 0 ? Math.ceil(revenueGap / metrics.averageTicket) : 0;
@@ -21,7 +36,7 @@ export const GoalSimulator: React.FC<GoalSimulatorProps> = ({ metrics, targetRev
     : null;
     
   const topProductSalesNeeded = topProduct && topProduct.totalRevenue > 0 && revenueGap > 0
-     ? Math.ceil(revenueGap / (topProduct.totalRevenue / topProduct.totalQuantity)) // Use average price of top product
+     ? Math.ceil(revenueGap / (topProduct.totalRevenue / topProduct.totalQuantity)) 
      : 0;
 
   return (
@@ -32,20 +47,40 @@ export const GoalSimulator: React.FC<GoalSimulatorProps> = ({ metrics, targetRev
                 <Target className="mr-2 text-emerald-400" size={20} />
                 Simulador de Meta
             </h3>
-            <p className="text-slate-400 text-xs mt-1 relative z-10">Quanto preciso vender para crescer?</p>
+            <p className="text-slate-400 text-xs mt-1 relative z-10">Monitore suas metas de curto e longo prazo.</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-slate-100">
+            <button 
+                onClick={() => setActiveTab('monthly')}
+                className={`flex-1 py-3 text-sm font-medium flex items-center justify-center transition-colors ${activeTab === 'monthly' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+                <Calendar size={16} className="mr-2" /> Mensal
+            </button>
+            <button 
+                onClick={() => setActiveTab('annual')}
+                className={`flex-1 py-3 text-sm font-medium flex items-center justify-center transition-colors ${activeTab === 'annual' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+                <CalendarDays size={16} className="mr-2" /> Anual
+            </button>
         </div>
         
         <div className="p-6">
             <div className="mb-6">
-                <label className="block text-xs uppercase font-bold text-slate-500 mb-2">Meta de Faturamento (Mês)</label>
+                <label className="block text-xs uppercase font-bold text-slate-500 mb-2">Meta de Faturamento ({label})</label>
                 <div className="relative">
                     <span className="absolute left-0 top-2 text-slate-400 font-light">R$</span>
                     <input 
                         type="number" 
-                        value={targetRevenue} 
-                        onChange={(e) => setTargetRevenue(parseFloat(e.target.value) || 0)}
+                        value={currentTarget} 
+                        onChange={(e) => setTarget(parseFloat(e.target.value) || 0)}
                         className="w-full text-3xl font-bold text-slate-800 border-b-2 border-slate-200 focus:border-indigo-600 outline-none pl-8 py-1 bg-transparent transition-colors placeholder-slate-300"
                     />
+                </div>
+                <div className="flex justify-between mt-2 text-xs">
+                    <span className="text-slate-500">Realizado:</span>
+                    <span className="font-bold text-slate-700">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentRevenue)}</span>
                 </div>
             </div>
 
@@ -72,10 +107,10 @@ export const GoalSimulator: React.FC<GoalSimulatorProps> = ({ metrics, targetRev
                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
                     <h4 className="font-bold text-amber-800 mb-2 flex items-center text-sm">
                         <AlertCircle size={16} className="mr-2" />
-                        Plano de Ação
+                        Falta para bater a meta {activeTab === 'monthly' ? 'do mês' : 'do ano'}:
                     </h4>
-                    <p className="text-sm text-slate-600 mb-3">
-                        Para atingir sua meta, faltam <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenueGap)}</strong>.
+                    <p className="text-2xl font-black text-amber-600 mb-3 tracking-tight">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(revenueGap)}
                     </p>
                     
                     <div className="space-y-2">
